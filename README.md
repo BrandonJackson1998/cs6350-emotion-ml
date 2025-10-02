@@ -1,6 +1,36 @@
 # cs6350-emotion-ml
 Detecting change in emotion given a time series of images
 
+## First Run
+
+Classification Report:
+              precision    recall  f1-score   support
+
+       angry     0.4390    0.5400    0.4843       100
+     disgust     0.8972    0.9600    0.9275       100
+        fear     0.3934    0.2400    0.2981       100
+       happy     0.8370    0.7700    0.8021       100
+     neutral     0.5088    0.5800    0.5421       100
+         sad     0.3981    0.4100    0.4039       100
+    surprise     0.7800    0.7800    0.7800       100
+
+    accuracy                         0.6114       700
+   macro avg     0.6076    0.6114    0.6054       700
+weighted avg     0.6076    0.6114    0.6054       700
+
+
+Classification report saved to './outputs/classification_report.txt'
+Confusion matrix saved as './outputs/confusion_matrix_benchmark.png'
+Training history saved as './outputs/training_history_benchmark.png'
+Training history data saved to './outputs/training_history.csv'
+
+==================================================
+Benchmark complete!
+All outputs saved to: ./outputs
+==================================================
+
+
+
 ## Project TODO List
 
 ### 1. Problem Definition & Goals
