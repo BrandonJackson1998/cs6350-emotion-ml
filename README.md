@@ -1,6 +1,47 @@
 # cs6350-emotion-ml
 Detecting change in emotion given a time series of images
 
+## First Run - Benchmark Results
+
+### Model Performance
+- **Overall Accuracy**: 61.14%
+- **Training Setup**: 100 samples per class (700 total)
+- **Validation Set**: 100 samples per class (700 total)
+- **Epochs**: 5
+- **Model**: dima806/facial_emotions_image_detection
+
+### Classification Report
+
+| Emotion  | Precision | Recall | F1-Score | Support |
+|----------|-----------|--------|----------|---------|
+| Angry    | 0.4390    | 0.5400 | 0.4843   | 100     |
+| Disgust  | 0.8972    | 0.9600 | 0.9275   | 100     |
+| Fear     | 0.3934    | 0.2400 | 0.2981   | 100     |
+| Happy    | 0.8370    | 0.7700 | 0.8021   | 100     |
+| Neutral  | 0.5088    | 0.5800 | 0.5421   | 100     |
+| Sad      | 0.3981    | 0.4100 | 0.4039   | 100     |
+| Surprise | 0.7800    | 0.7800 | 0.7800   | 100     |
+| **Macro Avg** | **0.6076** | **0.6114** | **0.6054** | **700** |
+
+### Key Insights
+
+**Strong Performance:**
+- 🎭 **Disgust**: 96% recall, 90% precision (best performing)
+- 😊 **Happy**: 77% recall, 84% precision
+- 😲 **Surprise**: 78% recall and precision
+
+**Weak Performance:**
+- 😨 **Fear**: 24% recall, 39% precision (worst performing)
+- 😢 **Sad**: 41% recall, 40% precision
+- 😠 **Angry**: 54% recall, 44% precision
+
+**Observations:**
+- Model excels at distinct expressions (disgust, surprise, happy)
+- Struggles with subtle or ambiguous emotions (fear, sad, angry)
+- Overall performance (61.14%) significantly exceeds random baseline (14.3%)
+
+
+
 ## Project TODO List
 
 ### 1. Problem Definition & Goals
