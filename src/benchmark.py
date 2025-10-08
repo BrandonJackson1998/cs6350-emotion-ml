@@ -184,8 +184,101 @@ def create_experiment_config(experiment_name, sampling_weights=None, **kwargs):
         'learning_rate': kwargs.get('learning_rate', 2e-5),
         'num_epochs': kwargs.get('num_epochs', 5),
         'sample_per_class': kwargs.get('sample_per_class', 100),
+        'resume_from_checkpoint': kwargs.get('resume_from_checkpoint', None),
+        'experiment_description': kwargs.get('experiment_description', ''),
     }
     return config
+
+def save_checkpoint(model, optimizer, epoch, best_acc, history, config, output_dir, is_best=False):
+    """Save training checkpoint with complete state"""
+    checkpoint = {
+        'epoch': epoch,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'best_acc': best_acc,
+        'history': history,
+        'config': config,
+        'timestamp': datetime.now().isoformat()
+    }
+    
+    # Ensure output directory exists
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Save regular checkpoint
+    checkpoint_path = os.path.join(output_dir, f'checkpoint_epoch_{epoch}.pt')
+    torch.save(checkpoint, checkpoint_path, _use_new_zipfile_serialization=False)
+    print(f"✓ Checkpoint saved: {checkpoint_path}")
+    
+    # Save best model checkpoint
+    if is_best:
+        best_checkpoint_path = os.path.join(output_dir, 'best_checkpoint.pt')
+        torch.save(checkpoint, best_checkpoint_path, _use_new_zipfile_serialization=False)
+        print(f"✓ Best checkpoint saved: {best_checkpoint_path}")
+    
+    return checkpoint_path
+
+def load_checkpoint(checkpoint_path, model, optimizer=None):
+    """Load training checkpoint and return state"""
+    if not os.path.exists(checkpoint_path):
+        raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
+    
+    print(f"Loading checkpoint from: {checkpoint_path}")
+    
+    # Try loading with weights_only=False for backward compatibility
+    try:
+        checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
+    except Exception as e:
+        print(f"Failed to load with weights_only=False, trying with weights_only=True: {e}")
+        # If that fails, try with weights_only=True and add safe globals
+        import numpy as np
+        torch.serialization.add_safe_globals([np._core.multiarray.scalar])
+        checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
+    
+    # Load model state
+    model.load_state_dict(checkpoint['model_state_dict'])
+    
+    # Load optimizer state if provided
+    if optimizer is not None and 'optimizer_state_dict' in checkpoint:
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    
+    return {
+        'epoch': checkpoint['epoch'],
+        'best_acc': checkpoint['best_acc'],
+        'history': checkpoint['history'],
+        'config': checkpoint['config']
+    }
+
+def log_experiment_change(output_dir, change_type, old_config, new_config):
+    """Log when experiment configuration changes"""
+    log_file = os.path.join(output_dir, 'experiment_changes.log')
+    
+    with open(log_file, 'a') as f:
+        f.write(f"\n{'='*60}\n")
+        f.write(f"EXPERIMENT CHANGE LOG - {datetime.now().isoformat()}\n")
+        f.write(f"Change Type: {change_type}\n")
+        f.write(f"{'='*60}\n")
+        
+        if change_type == "TRAINING_DATA_RATIO_CHANGE":
+            f.write("OLD SAMPLING WEIGHTS:\n")
+            if old_config.get('sampling_weights'):
+                for emotion, weight in old_config['sampling_weights'].items():
+                    f.write(f"  {emotion}: {weight}\n")
+            else:
+                f.write("  No sampling weights (uniform)\n")
+            
+            f.write("\nNEW SAMPLING WEIGHTS:\n")
+            if new_config.get('sampling_weights'):
+                for emotion, weight in new_config['sampling_weights'].items():
+                    f.write(f"  {emotion}: {weight}\n")
+            else:
+                f.write("  No sampling weights (uniform)\n")
+        
+        elif change_type == "RESUME_FROM_CHECKPOINT":
+            f.write(f"Resumed from: {new_config.get('resume_from_checkpoint', 'Unknown')}\n")
+            f.write(f"Resume epoch: {new_config.get('resume_epoch', 'Unknown')}\n")
+        
+        f.write(f"\nFull new config: {json.dumps(new_config, indent=2)}\n")
+        f.write(f"{'='*60}\n")
 
 def plot_confusion_matrix(y_true, y_pred, emotion_labels, output_dir='./outputs'):
     """Plot confusion matrix"""
@@ -212,16 +305,35 @@ def run_experiment(config):
     experiment_name = config['experiment_name']
     timestamp = config['timestamp']
     sampling_weights = config['sampling_weights']
+    resume_from_checkpoint = config.get('resume_from_checkpoint')
     
     # Create experiment-specific output directory
     OUTPUT_DIR = f'./experiments/{experiment_name}_{timestamp}'
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+    
+    # Initialize experiment log
+    log_file = os.path.join(OUTPUT_DIR, 'experiment_changes.log')
+    with open(log_file, 'w') as f:
+        f.write(f"EXPERIMENT LOG - {experiment_name}\n")
+        f.write(f"Started: {datetime.now().isoformat()}\n")
+        f.write(f"Description: {config.get('experiment_description', 'No description provided')}\n")
+        f.write(f"{'='*60}\n")
     
     # Save experiment configuration
     config_path = os.path.join(OUTPUT_DIR, 'experiment_config.json')
     with open(config_path, 'w') as f:
         json.dump(config, f, indent=2)
     print(f"Experiment config saved to: {config_path}")
+    
+    # Check if resuming from checkpoint
+    start_epoch = 0
+    best_val_acc = 0.0
+    history = {'train_loss': [], 'train_acc': [], 'val_loss': [], 'val_acc': []}
+    
+    if resume_from_checkpoint:
+        print(f"🔄 Resuming from checkpoint: {resume_from_checkpoint}")
+        # Log the resume action
+        log_experiment_change(OUTPUT_DIR, "RESUME_FROM_CHECKPOINT", {}, config)
     
     MODEL_NAME = config['model_name']
     BATCH_SIZE = config['batch_size']
@@ -294,15 +406,29 @@ def run_experiment(config):
     optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
     criterion = nn.CrossEntropyLoss()
     
+    # Load checkpoint if resuming
+    if resume_from_checkpoint:
+        try:
+            checkpoint_state = load_checkpoint(resume_from_checkpoint, model, optimizer)
+            start_epoch = checkpoint_state['epoch'] + 1  # Resume from next epoch
+            best_val_acc = checkpoint_state['best_acc']
+            history = checkpoint_state['history']
+            print(f"✓ Resumed from epoch {checkpoint_state['epoch']} with best acc: {best_val_acc:.4f}")
+        except Exception as e:
+            print(f"❌ Failed to load checkpoint: {e}")
+            print("Starting fresh training...")
+            start_epoch = 0
+            best_val_acc = 0.0
+            history = {'train_loss': [], 'train_acc': [], 'val_loss': [], 'val_acc': []}
+    
     # Training loop
     print(f"\n{'='*50}")
     print("Starting benchmark training...")
+    if resume_from_checkpoint:
+        print(f"Resuming from epoch {start_epoch}")
     print(f"{'='*50}\n")
     
-    best_val_acc = 0
-    history = {'train_loss': [], 'train_acc': [], 'val_loss': [], 'val_acc': []}
-    
-    for epoch in range(NUM_EPOCHS):
+    for epoch in range(start_epoch, NUM_EPOCHS):
         print(f"\nEpoch {epoch+1}/{NUM_EPOCHS}")
         print("-" * 50)
         
@@ -322,17 +448,20 @@ def run_experiment(config):
         print(f"\nTrain Loss: {train_loss:.4f} | Train Acc: {train_acc:.4f}")
         print(f"Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.4f}")
         
-        # Save each epoch model
+        # Save checkpoint with complete state
+        is_best = val_acc > best_val_acc
+        if is_best:
+            best_val_acc = val_acc
+            print(f"✓ New best model! (Val Acc: {val_acc:.4f})")
+        
+        checkpoint_path = save_checkpoint(
+            model, optimizer, epoch+1, best_val_acc, history, config, OUTPUT_DIR, is_best
+        )
+        
+        # Also save individual epoch model for compatibility
         epoch_model_path = os.path.join(OUTPUT_DIR, f'epoch_{epoch+1}_model.pt')
         torch.save(model.state_dict(), epoch_model_path)
         print(f"✓ Epoch {epoch+1} model saved to: {epoch_model_path}")
-        
-        # Save best model
-        if val_acc > best_val_acc:
-            best_val_acc = val_acc
-            best_model_path = os.path.join(OUTPUT_DIR, 'best_model.pt')
-            torch.save(model.state_dict(), best_model_path)
-            print(f"✓ New best model saved! (Val Acc: {val_acc:.4f})")
     
     # Final evaluation
     print(f"\n{'='*50}")
@@ -341,7 +470,19 @@ def run_experiment(config):
     print(f"\nBest Validation Accuracy: {best_val_acc:.4f}")
     
     # Load best model for final evaluation
-    model.load_state_dict(torch.load(os.path.join(OUTPUT_DIR, 'best_model.pt')))
+    best_checkpoint_path = os.path.join(OUTPUT_DIR, 'best_checkpoint.pt')
+    if os.path.exists(best_checkpoint_path):
+        print("Loading best checkpoint for final evaluation...")
+        load_checkpoint(best_checkpoint_path, model)
+    else:
+        print("Loading best model state for final evaluation...")
+        # Fallback to old format if best_checkpoint doesn't exist
+        best_model_path = os.path.join(OUTPUT_DIR, 'best_model.pt')
+        if os.path.exists(best_model_path):
+            model.load_state_dict(torch.load(best_model_path))
+        else:
+            print("No best model found, using current model state")
+    
     final_preds, final_labels, _ = evaluate(model, test_loader, device)
     
     # Classification report

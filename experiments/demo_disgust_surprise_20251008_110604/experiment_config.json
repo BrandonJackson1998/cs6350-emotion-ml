@@ -1,0 +1,20 @@
+{
+  "experiment_name": "demo_disgust_surprise",
+  "timestamp": "20251008_110604",
+  "sampling_weights": {
+    "angry": 1.0,
+    "disgust": 3.0,
+    "fear": 1.0,
+    "happy": 0.3,
+    "neutral": 1.0,
+    "sad": 1.0,
+    "surprise": 2.5
+  },
+  "model_name": "dima806/facial_emotions_image_detection",
+  "batch_size": 32,
+  "learning_rate": 2e-05,
+  "num_epochs": 3,
+  "sample_per_class": 100,
+  "resume_from_checkpoint": null,
+  "experiment_description": "Phase 1: Promoting disgust and surprise, demoting happy"
+}
