@@ -5,13 +5,15 @@ import numpy as np
 from PIL import Image
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from torchvision import transforms
 from transformers import AutoImageProcessor, AutoModelForImageClassification
 from sklearn.metrics import classification_report, confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns
 from tqdm import tqdm
+import json
+from datetime import datetime
 
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -28,15 +30,18 @@ EMOTION_TO_IDX = {emotion: idx for idx, emotion in enumerate(EMOTION_LABELS)}
 class FER2013FolderDataset(Dataset):
     """Custom Dataset for FER2013 organized in folders"""
     
-    def __init__(self, root_dir, processor, emotion_labels=EMOTION_LABELS, max_samples_per_class=None):
+    def __init__(self, root_dir, processor, emotion_labels=EMOTION_LABELS, max_samples_per_class=None, 
+                 sampling_weights=None):
         self.root_dir = root_dir
         self.processor = processor
         self.emotion_labels = emotion_labels
         self.emotion_to_idx = {emotion: idx for idx, emotion in enumerate(emotion_labels)}
+        self.sampling_weights = sampling_weights
         
         # Load all image paths and labels
         self.image_paths = []
         self.labels = []
+        self.class_counts = {}
         
         for emotion in emotion_labels:
             emotion_dir = os.path.join(root_dir, emotion)
@@ -51,11 +56,28 @@ class FER2013FolderDataset(Dataset):
             if max_samples_per_class:
                 image_files = image_files[:max_samples_per_class]
             
+            self.class_counts[emotion] = len(image_files)
+            
             for img_file in image_files:
                 self.image_paths.append(os.path.join(emotion_dir, img_file))
                 self.labels.append(self.emotion_to_idx[emotion])
         
         print(f"Loaded {len(self.image_paths)} images from {root_dir}")
+        if self.sampling_weights:
+            print(f"Using sampling weights: {self.sampling_weights}")
+    
+    def get_sampling_weights(self):
+        """Get sampling weights for WeightedRandomSampler"""
+        if not self.sampling_weights:
+            return None
+        
+        weights = []
+        for label in self.labels:
+            emotion = self.emotion_labels[label]
+            weight = self.sampling_weights.get(emotion, 1.0)
+            weights.append(weight)
+        
+        return torch.tensor(weights, dtype=torch.float)
         
     def __len__(self):
         return len(self.image_paths)
@@ -151,6 +173,20 @@ def evaluate(model, dataloader, device):
     
     return all_preds, all_labels, total_loss / len(dataloader)
 
+def create_experiment_config(experiment_name, sampling_weights=None, **kwargs):
+    """Create experiment configuration"""
+    config = {
+        'experiment_name': experiment_name,
+        'timestamp': datetime.now().strftime('%Y%m%d_%H%M%S'),
+        'sampling_weights': sampling_weights,
+        'model_name': kwargs.get('model_name', "dima806/facial_emotions_image_detection"),
+        'batch_size': kwargs.get('batch_size', 32),
+        'learning_rate': kwargs.get('learning_rate', 2e-5),
+        'num_epochs': kwargs.get('num_epochs', 5),
+        'sample_per_class': kwargs.get('sample_per_class', 100),
+    }
+    return config
+
 def plot_confusion_matrix(y_true, y_pred, emotion_labels, output_dir='./outputs'):
     """Plot confusion matrix"""
     os.makedirs(output_dir, exist_ok=True)
@@ -171,17 +207,27 @@ def plot_confusion_matrix(y_true, y_pred, emotion_labels, output_dir='./outputs'
     plt.close()
     print(f"Confusion matrix saved as '{output_path}'")
 
-def main():
-    # Configuration
-    MODEL_NAME = "dima806/facial_emotions_image_detection"
-    BATCH_SIZE = 32
-    LEARNING_RATE = 2e-5
-    NUM_EPOCHS = 5
-    SAMPLE_PER_CLASS = 100  # For benchmark, use 100 samples per class
-    OUTPUT_DIR = './outputs'
+def run_experiment(config):
+    """Run a single experiment with given configuration"""
+    experiment_name = config['experiment_name']
+    timestamp = config['timestamp']
+    sampling_weights = config['sampling_weights']
     
-    # Create output directory
+    # Create experiment-specific output directory
+    OUTPUT_DIR = f'./experiments/{experiment_name}_{timestamp}'
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+    
+    # Save experiment configuration
+    config_path = os.path.join(OUTPUT_DIR, 'experiment_config.json')
+    with open(config_path, 'w') as f:
+        json.dump(config, f, indent=2)
+    print(f"Experiment config saved to: {config_path}")
+    
+    MODEL_NAME = config['model_name']
+    BATCH_SIZE = config['batch_size']
+    LEARNING_RATE = config['learning_rate']
+    NUM_EPOCHS = config['num_epochs']
+    SAMPLE_PER_CLASS = config['sample_per_class']
     
     # Print dataset statistics
     print(f"\n{'='*50}")
@@ -212,15 +258,18 @@ def main():
     )
     model = model.to(device)
     
-    # Create datasets (benchmark with limited samples)
+    # Create datasets with sampling weights
     print(f"\n{'='*50}")
-    print(f"Creating benchmark datasets ({SAMPLE_PER_CLASS} samples per class)")
+    print(f"Creating datasets ({SAMPLE_PER_CLASS} samples per class)")
+    if sampling_weights:
+        print(f"Sampling weights: {sampling_weights}")
     print(f"{'='*50}")
     train_dataset = FER2013FolderDataset(
         TRAIN_DIR, 
         processor, 
         EMOTION_LABELS,
-        max_samples_per_class=SAMPLE_PER_CLASS
+        max_samples_per_class=SAMPLE_PER_CLASS,
+        sampling_weights=sampling_weights
     )
     
     # Use smaller test set for faster benchmarking
@@ -231,8 +280,14 @@ def main():
         max_samples_per_class=100
     )
     
-    # Create dataloaders
-    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=2)
+    # Create dataloaders with weighted sampling if specified
+    if sampling_weights:
+        sampler_weights = train_dataset.get_sampling_weights()
+        sampler = WeightedRandomSampler(sampler_weights, len(sampler_weights))
+        train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, sampler=sampler, num_workers=2)
+    else:
+        train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=2)
+    
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=2)
     
     # Setup training
@@ -267,21 +322,26 @@ def main():
         print(f"\nTrain Loss: {train_loss:.4f} | Train Acc: {train_acc:.4f}")
         print(f"Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.4f}")
         
+        # Save each epoch model
+        epoch_model_path = os.path.join(OUTPUT_DIR, f'epoch_{epoch+1}_model.pt')
+        torch.save(model.state_dict(), epoch_model_path)
+        print(f"✓ Epoch {epoch+1} model saved to: {epoch_model_path}")
+        
         # Save best model
         if val_acc > best_val_acc:
             best_val_acc = val_acc
-            model_path = os.path.join(OUTPUT_DIR, 'best_model_benchmark.pt')
-            torch.save(model.state_dict(), model_path)
+            best_model_path = os.path.join(OUTPUT_DIR, 'best_model.pt')
+            torch.save(model.state_dict(), best_model_path)
             print(f"✓ New best model saved! (Val Acc: {val_acc:.4f})")
     
     # Final evaluation
     print(f"\n{'='*50}")
-    print("BENCHMARK RESULTS")
+    print("EXPERIMENT RESULTS")
     print(f"{'='*50}")
     print(f"\nBest Validation Accuracy: {best_val_acc:.4f}")
     
     # Load best model for final evaluation
-    model.load_state_dict(torch.load(os.path.join(OUTPUT_DIR, 'best_model_benchmark.pt')))
+    model.load_state_dict(torch.load(os.path.join(OUTPUT_DIR, 'best_model.pt')))
     final_preds, final_labels, _ = evaluate(model, test_loader, device)
     
     # Classification report
@@ -320,7 +380,7 @@ def main():
     ax2.grid(True)
     
     plt.tight_layout()
-    history_path = os.path.join(OUTPUT_DIR, 'training_history_benchmark.png')
+    history_path = os.path.join(OUTPUT_DIR, 'training_history.png')
     plt.savefig(history_path)
     plt.close()
     print(f"Training history saved as '{history_path}'")
@@ -332,9 +392,98 @@ def main():
     print(f"Training history data saved to '{history_csv_path}'")
     
     print(f"\n{'='*50}")
-    print("Benchmark complete!")
+    print("Experiment complete!")
     print(f"All outputs saved to: {OUTPUT_DIR}")
     print(f"{'='*50}")
+    
+    return OUTPUT_DIR, best_val_acc
+
+def main():
+    """Main function to run experiments"""
+    print("Emotion Recognition Experiment Runner")
+    print("=" * 50)
+    
+    # Define experiment configurations
+    experiments = [
+        # Baseline experiment (no sampling weights)
+        create_experiment_config(
+            experiment_name="baseline",
+            sampling_weights=None,
+            num_epochs=5,
+            sample_per_class=100
+        ),
+        
+        # Experiment with higher weight for underrepresented emotions
+        create_experiment_config(
+            experiment_name="weighted_disgust_fear",
+            sampling_weights={
+                'angry': 1.0,
+                'disgust': 3.0,  # Higher weight for underrepresented class
+                'fear': 1.5,
+                'happy': 1.0,
+                'neutral': 1.0,
+                'sad': 1.0,
+                'surprise': 1.0
+            },
+            num_epochs=5,
+            sample_per_class=100
+        ),
+        
+        # Experiment focusing on positive emotions
+        create_experiment_config(
+            experiment_name="positive_emotions_focus",
+            sampling_weights={
+                'angry': 0.5,
+                'disgust': 0.5,
+                'fear': 0.5,
+                'happy': 2.0,  # Higher weight for happy
+                'neutral': 1.0,
+                'sad': 0.5,
+                'surprise': 1.5  # Higher weight for surprise
+            },
+            num_epochs=5,
+            sample_per_class=100
+        )
+    ]
+    
+    # Run experiments
+    results = []
+    for i, config in enumerate(experiments):
+        print(f"\n{'='*60}")
+        print(f"Running Experiment {i+1}/{len(experiments)}: {config['experiment_name']}")
+        print(f"{'='*60}")
+        
+        try:
+            output_dir, best_acc = run_experiment(config)
+            results.append({
+                'experiment': config['experiment_name'],
+                'output_dir': output_dir,
+                'best_accuracy': best_acc,
+                'sampling_weights': config['sampling_weights']
+            })
+            print(f"✓ Experiment {config['experiment_name']} completed successfully!")
+        except Exception as e:
+            print(f"✗ Experiment {config['experiment_name']} failed: {e}")
+            results.append({
+                'experiment': config['experiment_name'],
+                'output_dir': None,
+                'best_accuracy': 0.0,
+                'sampling_weights': config['sampling_weights'],
+                'error': str(e)
+            })
+    
+    # Print summary
+    print(f"\n{'='*60}")
+    print("EXPERIMENT SUMMARY")
+    print(f"{'='*60}")
+    for result in results:
+        if 'error' in result:
+            print(f"❌ {result['experiment']}: FAILED - {result['error']}")
+        else:
+            print(f"✅ {result['experiment']}: {result['best_accuracy']:.4f} accuracy")
+            print(f"   Output: {result['output_dir']}")
+    
+    print(f"\nAll experiments completed!")
 
 if __name__ == "__main__":
     main()
