@@ -37,3 +37,8 @@ install-deb-mac:
 
 benchmark:
 	source $(VENV)/bin/activate; python -m src.benchmark
+
+test-full-dataset:
+	source $(VENV)/bin/activate; python test_full_dataset.py
+
+run: benchmark
