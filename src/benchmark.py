@@ -683,56 +683,15 @@ def main():
     
     # Define experiment configurations
     experiments = [
-        # Baseline experiment (no sampling weights) - for comparison
+        # FULL DATASET EXPERIMENT - Multi-epoch for training curves
         create_experiment_config(
-            experiment_name="baseline_limited",
-            sampling_weights=None,
-            num_epochs=1,
-            sample_per_class=100,
-            experiment_description="Baseline with 100 samples per class for comparison"
-        ),
-        
-        # FULL DATASET EXPERIMENT - Main test
-        create_experiment_config(
-            experiment_name="full_dataset_test",
+            experiment_name="full_dataset_multi_epoch",
             sampling_weights=None,
             use_full_dataset=True,
             batch_size=16,  # Conservative batch size for memory safety
-            num_epochs=1,   # Single epoch test
+            num_epochs=5,   # Multiple epochs for proper training curves
             batch_checkpoint_frequency=100,  # Checkpoint every 100 batches
-            experiment_description="Test full dataset training with 28,709 images - single epoch with enhanced checkpointing"
-        ),
-        
-        # Experiment with higher weight for underrepresented emotions
-        create_experiment_config(
-            experiment_name="weighted_disgust_fear",
-            sampling_weights={
-                'angry': 1.0,
-                'disgust': 3.0,  # Higher weight for underrepresented class
-                'fear': 1.5,
-                'happy': 1.0,
-                'neutral': 1.0,
-                'sad': 1.0,
-                'surprise': 1.0
-            },
-            num_epochs=5,
-            sample_per_class=100
-        ),
-        
-        # Experiment focusing on positive emotions
-        create_experiment_config(
-            experiment_name="positive_emotions_focus",
-            sampling_weights={
-                'angry': 0.5,
-                'disgust': 0.5,
-                'fear': 0.5,
-                'happy': 2.0,  # Higher weight for happy
-                'neutral': 1.0,
-                'sad': 0.5,
-                'surprise': 1.5  # Higher weight for surprise
-            },
-            num_epochs=5,
-            sample_per_class=100
+            experiment_description="Full dataset training with 28,709 images - 3 epochs with enhanced checkpointing and training curves"
         )
     ]
     
