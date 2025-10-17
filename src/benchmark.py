@@ -30,8 +30,9 @@ CURRENT_CHECKPOINT_INFO = None
 TRAIN_DIR = "data/train"
 TEST_DIR = "data/test"
 
-# Emotion labels (alphabetically ordered to match folder structure)
-EMOTION_LABELS = ['angry', 'disgust', 'fear', 'happy', 'neutral', 'sad', 'surprise']
+# Emotion labels (ordered to match pre-trained model expectations)
+# Model expects: sad, disgust, angry, neutral, fear, surprise, happy
+EMOTION_LABELS = ['sad', 'disgust', 'angry', 'neutral', 'fear', 'surprise', 'happy']
 EMOTION_TO_IDX = {emotion: idx for idx, emotion in enumerate(EMOTION_LABELS)}
 
 class FER2013FolderDataset(Dataset):

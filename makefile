@@ -41,4 +41,7 @@ benchmark:
 test-full-dataset:
 	source $(VENV)/bin/activate; python test_full_dataset.py
 
+evaluate-baseline:
+	source $(VENV)/bin/activate; python evaluate_baseline.py
+
 run: benchmark
