@@ -353,11 +353,12 @@ sudo apt install python3.12-venv ffmpeg
 ### Getting Help
 
 If you encounter issues not covered here:
-1. Check that all installation steps were completed
-2. Ensure the virtual environment is activated
-3. Verify the dataset is properly downloaded and extracted
-4. Check the `experiments/` directory for error logs
-5. Create an issue on the GitHub repository with:
+1. Check the [FAQ.md](FAQ.md) for common questions and solutions
+2. Check that all installation steps were completed
+3. Ensure the virtual environment is activated
+4. Verify the dataset is properly downloaded and extracted
+5. Check the `experiments/` directory for error logs
+6. Create an issue on the GitHub repository with:
    - Your operating system
    - Python version (`python3 --version`)
    - Complete error message
@@ -485,6 +486,14 @@ Once you have successfully run the benchmark:
 3. **Adjust hyperparameters** (epochs, batch size, learning rate)
 4. **Try different sampling weights** to improve specific emotion detection
 5. **Review the project roadmap** in `PROJECT_ROADMAP.md` for future development tasks
+
+### Additional Guides
+
+- 📖 [QUICKSTART.md](QUICKSTART.md) - Fast setup and common commands
+- 🔄 [WORKFLOW.md](WORKFLOW.md) - Detailed workflow guides for various scenarios
+- ❓ [FAQ.md](FAQ.md) - Frequently asked questions and answers
+- 🤝 [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute to the project
+- 🗺️ [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md) - Long-term development goals
 
 ## 📚 Additional Resources
 
