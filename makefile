@@ -7,7 +7,9 @@ help:
 	@echo "Targets:"
 	@echo "install                     - Install environment necessary to support this project."
 	@echo "install-deb                 - Install OS packages necessary to support this project. Assumes apt/dpkg package management system."
-	@echo "install-pip                 - Install Python pakcages necessary to suport this project."
+	@echo "install-pip                 - Install Python packages necessary to support this project."
+	@echo "verify                      - Verify that the setup is correct and all dependencies are installed."
+	@echo "benchmark                   - Run the emotion detection benchmark."
 	@echo "code-agent-gemini-demo      - Run the demo CodeAgent using the Gemini API."
 	@echo
 
@@ -24,7 +26,7 @@ install-deb:
 	done
 
 install-pip: $(VENV)
-	source $(VENV)/bin/activate; pip3 install --upgrade -r requirements.txt
+	@. $(VENV)/bin/activate && pip3 install --upgrade -r requirements.txt
 
 install-mac: install-deb-mac install-pip
 	
@@ -35,5 +37,8 @@ install-deb-mac:
 		brew list --versions $${package} 2>&1 > /dev/null || brew install $${package}; \
 	done
 
+verify:
+	@. $(VENV)/bin/activate && python verify_setup.py
+
 benchmark:
-	source $(VENV)/bin/activate; python -m src.benchmark
+	@. $(VENV)/bin/activate && python -m src.benchmark
