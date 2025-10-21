@@ -8,6 +8,8 @@ This project uses the FER-2013 dataset and pre-trained emotion detection models 
 
 This guide will help you set up and run the project from scratch. No prior experience required!
 
+> **📖 Looking for a faster guide?** Check out [QUICKSTART.md](QUICKSTART.md) for a condensed version with just the essential commands.
+
 ### Prerequisites
 
 Before you begin, make sure you have:
@@ -243,6 +245,31 @@ experiments/
 - Struggles with subtle or ambiguous emotions (fear, sad, angry)
 - Overall performance (61.14%) significantly exceeds random baseline (14.3%)
 
+## 🛠️ Available Make Commands
+
+The project includes a Makefile with convenient commands:
+
+| Command | Description |
+|---------|-------------|
+| `make help` | Show all available commands |
+| `make install` | Complete installation (system packages + Python packages) |
+| `make install-deb` | Install system packages (Linux/Ubuntu) |
+| `make install-deb-mac` | Install system packages (macOS) |
+| `make install-pip` | Create virtual environment and install Python packages |
+| `make benchmark` | Run the benchmark experiment |
+
+**Example usage:**
+```bash
+# Show help
+make help
+
+# Install everything (Linux)
+make install
+
+# Just run the benchmark
+make benchmark
+```
+
 ## 📁 Project Structure
 
 ```
@@ -439,6 +466,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+For detailed contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
