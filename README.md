@@ -256,6 +256,7 @@ The project includes a Makefile with convenient commands:
 | `make install-deb` | Install system packages (Linux/Ubuntu) |
 | `make install-deb-mac` | Install system packages (macOS) |
 | `make install-pip` | Create virtual environment and install Python packages |
+| `make verify` | Verify setup is correct and all dependencies are installed |
 | `make benchmark` | Run the benchmark experiment |
 
 **Example usage:**
@@ -405,29 +406,62 @@ config = create_experiment_config(
 
 ## 🧪 Verification Steps
 
-After installation, verify everything is set up correctly:
+After installation, verify everything is set up correctly.
 
-### 1. Check Python Installation
+### Automated Verification (Recommended)
+
+We provide a verification script that checks everything automatically:
+
+```bash
+source .virtual_environment/bin/activate
+python verify_setup.py
+```
+
+This script will check:
+- ✅ Python version
+- ✅ Virtual environment activation
+- ✅ All required packages
+- ✅ Project file structure
+- ✅ Dataset presence and structure
+
+**Expected output:**
+```
+🔍 CS6350 Emotion ML - Setup Verification
+============================================================
+✅ Python Version                : PASS
+✅ Virtual Environment           : PASS
+✅ Required Packages             : PASS
+✅ Project Files                 : PASS
+✅ Dataset                       : PASS
+============================================================
+🎉 All checks passed! Your environment is ready.
+```
+
+### Manual Verification (Optional)
+
+If you prefer to verify manually:
+
+#### 1. Check Python Installation
 ```bash
 python3 --version
 # Should show: Python 3.12.x
 ```
 
-### 2. Check Virtual Environment
+#### 2. Check Virtual Environment
 ```bash
 source .virtual_environment/bin/activate
 which python
 # Should show path to .virtual_environment/bin/python
 ```
 
-### 3. Check Installed Packages
+#### 3. Check Installed Packages
 ```bash
 source .virtual_environment/bin/activate
 pip list | grep torch
 # Should show torch and torchvision packages
 ```
 
-### 4. Check Dataset
+#### 4. Check Dataset
 ```bash
 ls data/train/
 # Should show 7 emotion directories
@@ -435,7 +469,7 @@ ls data/train/happy/ | wc -l
 # Should show number of happy images
 ```
 
-### 5. Test Import
+#### 5. Test Import
 ```bash
 source .virtual_environment/bin/activate
 python -c "import torch; import transformers; print('✓ All imports successful')"

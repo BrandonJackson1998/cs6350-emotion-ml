@@ -46,6 +46,17 @@ source .virtual_environment/bin/activate
 make benchmark
 ```
 
+## Verify Setup (Recommended)
+
+Before running experiments, verify your setup:
+
+```bash
+source .virtual_environment/bin/activate
+python verify_setup.py
+```
+
+Should show all checks passing ✅.
+
 ## Check Results
 
 Results are saved to `./experiments/` directory with:
