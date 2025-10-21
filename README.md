@@ -490,6 +490,7 @@ Once you have successfully run the benchmark:
 ### Additional Guides
 
 - 📖 [QUICKSTART.md](QUICKSTART.md) - Fast setup and common commands
+- 📋 [CHEATSHEET.md](CHEATSHEET.md) - Quick reference for commands and configuration
 - 🔄 [WORKFLOW.md](WORKFLOW.md) - Detailed workflow guides for various scenarios
 - ❓ [FAQ.md](FAQ.md) - Frequently asked questions and answers
 - 🤝 [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute to the project
