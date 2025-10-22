@@ -1,0 +1,24 @@
+{
+  "experiment_name": "positive_emotions_focus",
+  "timestamp": "20251014_135024",
+  "sampling_weights": {
+    "angry": 0.5,
+    "disgust": 0.5,
+    "fear": 0.5,
+    "happy": 2.0,
+    "neutral": 1.0,
+    "sad": 0.5,
+    "surprise": 1.5
+  },
+  "model_name": "dima806/facial_emotions_image_detection",
+  "batch_size": 32,
+  "learning_rate": 2e-05,
+  "num_epochs": 5,
+  "sample_per_class": 100,
+  "use_full_dataset": false,
+  "batch_checkpoint_frequency": 100,
+  "auto_checkpoint_on_interrupt": true,
+  "max_batch_checkpoints": 3,
+  "resume_from_checkpoint": null,
+  "experiment_description": ""
+}

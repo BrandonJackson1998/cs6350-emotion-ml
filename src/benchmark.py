@@ -14,29 +14,38 @@ import seaborn as sns
 from tqdm import tqdm
 import json
 from datetime import datetime
+import signal
+import sys
+import gc
 
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
+# Global variables for interrupt handling
+TRAINING_INTERRUPTED = False
+CURRENT_CHECKPOINT_INFO = None
+
 # Data paths - relative to project root
 TRAIN_DIR = "data/train"
 TEST_DIR = "data/test"
 
-# Emotion labels (alphabetically ordered to match folder structure)
-EMOTION_LABELS = ['angry', 'disgust', 'fear', 'happy', 'neutral', 'sad', 'surprise']
+# Emotion labels (ordered to match pre-trained model expectations)
+# Model expects: sad, disgust, angry, neutral, fear, surprise, happy
+EMOTION_LABELS = ['sad', 'disgust', 'angry', 'neutral', 'fear', 'surprise', 'happy']
 EMOTION_TO_IDX = {emotion: idx for idx, emotion in enumerate(EMOTION_LABELS)}
 
 class FER2013FolderDataset(Dataset):
     """Custom Dataset for FER2013 organized in folders"""
     
     def __init__(self, root_dir, processor, emotion_labels=EMOTION_LABELS, max_samples_per_class=None, 
-                 sampling_weights=None):
+                 sampling_weights=None, use_full_dataset=False):
         self.root_dir = root_dir
         self.processor = processor
         self.emotion_labels = emotion_labels
         self.emotion_to_idx = {emotion: idx for idx, emotion in enumerate(emotion_labels)}
         self.sampling_weights = sampling_weights
+        self.use_full_dataset = use_full_dataset
         
         # Load all image paths and labels
         self.image_paths = []
@@ -52,17 +61,30 @@ class FER2013FolderDataset(Dataset):
             image_files = [f for f in os.listdir(emotion_dir) 
                           if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
             
-            # Limit samples per class if specified (for benchmarking)
-            if max_samples_per_class:
-                image_files = image_files[:max_samples_per_class]
+            # Use full dataset or limit samples per class
+            if use_full_dataset:
+                # Use all available images
+                selected_files = image_files
+                print(f"Using full dataset for {emotion}: {len(selected_files)} images")
+            elif max_samples_per_class:
+                # Limit samples per class if specified (for benchmarking)
+                selected_files = image_files[:max_samples_per_class]
+                print(f"Limited dataset for {emotion}: {len(selected_files)}/{len(image_files)} images")
+            else:
+                # Use all available if no limit specified
+                selected_files = image_files
             
-            self.class_counts[emotion] = len(image_files)
+            self.class_counts[emotion] = len(selected_files)
             
-            for img_file in image_files:
+            for img_file in selected_files:
                 self.image_paths.append(os.path.join(emotion_dir, img_file))
                 self.labels.append(self.emotion_to_idx[emotion])
         
         print(f"Loaded {len(self.image_paths)} images from {root_dir}")
+        print("Class distribution:")
+        for emotion, count in self.class_counts.items():
+            print(f"  {emotion:10s}: {count:5d} images")
+        
         if self.sampling_weights:
             print(f"Using sampling weights: {self.sampling_weights}")
     
@@ -120,15 +142,42 @@ def get_dataset_statistics(root_dir, emotion_labels=EMOTION_LABELS):
     
     return stats, total
 
-def train_epoch(model, dataloader, optimizer, criterion, device):
-    """Train for one epoch"""
+def signal_handler(signum, frame):
+    """Handle interruption signals gracefully"""
+    global TRAINING_INTERRUPTED, CURRENT_CHECKPOINT_INFO
+    print(f"\n⚠️  Training interrupted by signal {signum}")
+    print("Saving checkpoint before exit...")
+    TRAINING_INTERRUPTED = True
+
+def setup_signal_handlers():
+    """Setup signal handlers for graceful interruption"""
+    signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
+    signal.signal(signal.SIGTERM, signal_handler)  # Termination
+    print("✓ Signal handlers registered for graceful interruption")
+
+def train_epoch(model, dataloader, optimizer, criterion, device, config=None, 
+                output_dir=None, epoch=0, best_acc=0, history=None):
+    """Train for one epoch with batch-level checkpointing"""
+    global TRAINING_INTERRUPTED
+    
     model.train()
     total_loss = 0
     correct = 0
     total = 0
     
-    progress_bar = tqdm(dataloader, desc="Training")
-    for batch in progress_bar:
+    batch_checkpoint_frequency = config.get('batch_checkpoint_frequency', 100) if config else 100
+    total_batches = len(dataloader)
+    
+    progress_bar = tqdm(dataloader, desc=f"Training Epoch {epoch+1}")
+    for batch_idx, batch in enumerate(progress_bar):
+        # Check for interruption
+        if TRAINING_INTERRUPTED:
+            print("\n⚠️  Training interrupted, saving checkpoint...")
+            if config and output_dir and history is not None:
+                save_checkpoint(model, optimizer, epoch, best_acc, history, config, 
+                              output_dir, current_batch=batch_idx, total_batches=total_batches)
+            break
+            
         pixel_values = batch['pixel_values'].to(device)
         labels = batch['labels'].to(device)
         
@@ -147,7 +196,22 @@ def train_epoch(model, dataloader, optimizer, criterion, device):
         correct += (predictions == labels).sum().item()
         total += labels.size(0)
         
-        progress_bar.set_postfix({'loss': loss.item(), 'acc': correct/total})
+        # Update progress with memory usage
+        memory_info = get_memory_usage()
+        progress_bar.set_postfix({
+            'loss': loss.item(), 
+            'acc': correct/total,
+            'gpu_mem': f"{memory_info['allocated']:.1f}GB"
+        })
+        
+        # Save batch checkpoint periodically
+        if (config and output_dir and history is not None and 
+            batch_checkpoint_frequency > 0 and 
+            (batch_idx + 1) % batch_checkpoint_frequency == 0):
+            
+            print(f"\n💾 Saving batch checkpoint at batch {batch_idx + 1}/{total_batches}")
+            save_checkpoint(model, optimizer, epoch, best_acc, history, config, 
+                          output_dir, current_batch=batch_idx, total_batches=total_batches)
     
     return total_loss / len(dataloader), correct / total
 
@@ -184,8 +248,150 @@ def create_experiment_config(experiment_name, sampling_weights=None, **kwargs):
         'learning_rate': kwargs.get('learning_rate', 2e-5),
         'num_epochs': kwargs.get('num_epochs', 5),
         'sample_per_class': kwargs.get('sample_per_class', 100),
+        'use_full_dataset': kwargs.get('use_full_dataset', False),
+        'batch_checkpoint_frequency': kwargs.get('batch_checkpoint_frequency', 100),
+        'auto_checkpoint_on_interrupt': kwargs.get('auto_checkpoint_on_interrupt', True),
+        'max_batch_checkpoints': kwargs.get('max_batch_checkpoints', 3),
+        'resume_from_checkpoint': kwargs.get('resume_from_checkpoint', None),
+        'experiment_description': kwargs.get('experiment_description', ''),
     }
     return config
+
+def save_checkpoint(model, optimizer, epoch, best_acc, history, config, output_dir, is_best=False, 
+                   current_batch=None, total_batches=None):
+    """Save training checkpoint with complete state"""
+    checkpoint = {
+        'epoch': epoch,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'best_acc': best_acc,
+        'history': history,
+        'config': config,
+        'timestamp': datetime.now().isoformat(),
+        'current_batch': current_batch,
+        'total_batches': total_batches
+    }
+    
+    # Ensure output directory exists
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Save batch checkpoint if batch info provided
+    if current_batch is not None:
+        checkpoint_path = os.path.join(output_dir, f'checkpoint_epoch_{epoch}_batch_{current_batch}.pt')
+        torch.save(checkpoint, checkpoint_path, _use_new_zipfile_serialization=False)
+        print(f"✓ Batch checkpoint saved: {checkpoint_path}")
+        
+        # Clean up old batch checkpoints (keep only last 3)
+        cleanup_old_batch_checkpoints(output_dir, epoch, current_batch, 
+                                     config.get('max_batch_checkpoints', 3))
+    else:
+        # Save regular epoch checkpoint
+        checkpoint_path = os.path.join(output_dir, f'checkpoint_epoch_{epoch}.pt')
+        torch.save(checkpoint, checkpoint_path, _use_new_zipfile_serialization=False)
+        print(f"✓ Checkpoint saved: {checkpoint_path}")
+    
+    # Save best model checkpoint
+    if is_best:
+        best_checkpoint_path = os.path.join(output_dir, 'best_checkpoint.pt')
+        torch.save(checkpoint, best_checkpoint_path, _use_new_zipfile_serialization=False)
+        print(f"✓ Best checkpoint saved: {best_checkpoint_path}")
+    
+    return checkpoint_path
+
+def cleanup_old_batch_checkpoints(output_dir, current_epoch, current_batch, max_checkpoints):
+    """Clean up old batch checkpoints, keeping only the most recent ones"""
+    try:
+        # Find all batch checkpoints for current epoch
+        batch_checkpoints = []
+        for file in os.listdir(output_dir):
+            if file.startswith(f'checkpoint_epoch_{current_epoch}_batch_') and file.endswith('.pt'):
+                batch_num = int(file.split('_batch_')[1].split('.pt')[0])
+                batch_checkpoints.append((batch_num, file))
+        
+        # Sort by batch number and keep only recent ones
+        batch_checkpoints.sort(key=lambda x: x[0])
+        if len(batch_checkpoints) > max_checkpoints:
+            for batch_num, filename in batch_checkpoints[:-max_checkpoints]:
+                old_path = os.path.join(output_dir, filename)
+                os.remove(old_path)
+                print(f"✓ Cleaned up old checkpoint: {filename}")
+    except Exception as e:
+        print(f"Warning: Failed to cleanup old checkpoints: {e}")
+
+def get_memory_usage():
+    """Get current GPU memory usage"""
+    if torch.cuda.is_available():
+        return {
+            'allocated': torch.cuda.memory_allocated() / 1024**3,  # GB
+            'reserved': torch.cuda.memory_reserved() / 1024**3,    # GB
+            'max_allocated': torch.cuda.max_memory_allocated() / 1024**3  # GB
+        }
+    return {'allocated': 0, 'reserved': 0, 'max_allocated': 0}
+
+def load_checkpoint(checkpoint_path, model, optimizer=None):
+    """Load training checkpoint and return state"""
+    if not os.path.exists(checkpoint_path):
+        raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
+    
+    print(f"Loading checkpoint from: {checkpoint_path}")
+    
+    # Try loading with weights_only=False for backward compatibility
+    try:
+        checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
+    except Exception as e:
+        print(f"Failed to load with weights_only=False, trying with weights_only=True: {e}")
+        # If that fails, try with weights_only=True and add safe globals
+        import numpy as np
+        torch.serialization.add_safe_globals([np._core.multiarray.scalar])
+        checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
+    
+    # Load model state
+    model.load_state_dict(checkpoint['model_state_dict'])
+    
+    # Load optimizer state if provided
+    if optimizer is not None and 'optimizer_state_dict' in checkpoint:
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    
+    return {
+        'epoch': checkpoint['epoch'],
+        'best_acc': checkpoint['best_acc'],
+        'history': checkpoint['history'],
+        'config': checkpoint['config'],
+        'current_batch': checkpoint.get('current_batch', None),
+        'total_batches': checkpoint.get('total_batches', None)
+    }
+
+def log_experiment_change(output_dir, change_type, old_config, new_config):
+    """Log when experiment configuration changes"""
+    log_file = os.path.join(output_dir, 'experiment_changes.log')
+    
+    with open(log_file, 'a') as f:
+        f.write(f"\n{'='*60}\n")
+        f.write(f"EXPERIMENT CHANGE LOG - {datetime.now().isoformat()}\n")
+        f.write(f"Change Type: {change_type}\n")
+        f.write(f"{'='*60}\n")
+        
+        if change_type == "TRAINING_DATA_RATIO_CHANGE":
+            f.write("OLD SAMPLING WEIGHTS:\n")
+            if old_config.get('sampling_weights'):
+                for emotion, weight in old_config['sampling_weights'].items():
+                    f.write(f"  {emotion}: {weight}\n")
+            else:
+                f.write("  No sampling weights (uniform)\n")
+            
+            f.write("\nNEW SAMPLING WEIGHTS:\n")
+            if new_config.get('sampling_weights'):
+                for emotion, weight in new_config['sampling_weights'].items():
+                    f.write(f"  {emotion}: {weight}\n")
+            else:
+                f.write("  No sampling weights (uniform)\n")
+        
+        elif change_type == "RESUME_FROM_CHECKPOINT":
+            f.write(f"Resumed from: {new_config.get('resume_from_checkpoint', 'Unknown')}\n")
+            f.write(f"Resume epoch: {new_config.get('resume_epoch', 'Unknown')}\n")
+        
+        f.write(f"\nFull new config: {json.dumps(new_config, indent=2)}\n")
+        f.write(f"{'='*60}\n")
 
 def plot_confusion_matrix(y_true, y_pred, emotion_labels, output_dir='./outputs'):
     """Plot confusion matrix"""
@@ -212,10 +418,19 @@ def run_experiment(config):
     experiment_name = config['experiment_name']
     timestamp = config['timestamp']
     sampling_weights = config['sampling_weights']
+    resume_from_checkpoint = config.get('resume_from_checkpoint')
     
     # Create experiment-specific output directory
     OUTPUT_DIR = f'./experiments/{experiment_name}_{timestamp}'
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+    
+    # Initialize experiment log
+    log_file = os.path.join(OUTPUT_DIR, 'experiment_changes.log')
+    with open(log_file, 'w') as f:
+        f.write(f"EXPERIMENT LOG - {experiment_name}\n")
+        f.write(f"Started: {datetime.now().isoformat()}\n")
+        f.write(f"Description: {config.get('experiment_description', 'No description provided')}\n")
+        f.write(f"{'='*60}\n")
     
     # Save experiment configuration
     config_path = os.path.join(OUTPUT_DIR, 'experiment_config.json')
@@ -223,11 +438,25 @@ def run_experiment(config):
         json.dump(config, f, indent=2)
     print(f"Experiment config saved to: {config_path}")
     
+    # Check if resuming from checkpoint
+    start_epoch = 0
+    best_val_acc = 0.0
+    history = {'train_loss': [], 'train_acc': [], 'val_loss': [], 'val_acc': []}
+    
+    if resume_from_checkpoint:
+        print(f"🔄 Resuming from checkpoint: {resume_from_checkpoint}")
+        # Log the resume action
+        log_experiment_change(OUTPUT_DIR, "RESUME_FROM_CHECKPOINT", {}, config)
+    
     MODEL_NAME = config['model_name']
     BATCH_SIZE = config['batch_size']
     LEARNING_RATE = config['learning_rate']
     NUM_EPOCHS = config['num_epochs']
     SAMPLE_PER_CLASS = config['sample_per_class']
+    USE_FULL_DATASET = config.get('use_full_dataset', False)
+    
+    # Setup signal handlers for graceful interruption
+    setup_signal_handlers()
     
     # Print dataset statistics
     print(f"\n{'='*50}")
@@ -260,16 +489,22 @@ def run_experiment(config):
     
     # Create datasets with sampling weights
     print(f"\n{'='*50}")
-    print(f"Creating datasets ({SAMPLE_PER_CLASS} samples per class)")
+    if USE_FULL_DATASET:
+        print("Creating datasets (FULL DATASET MODE)")
+        print("⚠️  Using conservative batch size for memory safety")
+    else:
+        print(f"Creating datasets ({SAMPLE_PER_CLASS} samples per class)")
     if sampling_weights:
         print(f"Sampling weights: {sampling_weights}")
     print(f"{'='*50}")
+    
     train_dataset = FER2013FolderDataset(
         TRAIN_DIR, 
         processor, 
         EMOTION_LABELS,
-        max_samples_per_class=SAMPLE_PER_CLASS,
-        sampling_weights=sampling_weights
+        max_samples_per_class=None if USE_FULL_DATASET else SAMPLE_PER_CLASS,
+        sampling_weights=sampling_weights,
+        use_full_dataset=USE_FULL_DATASET
     )
     
     # Use smaller test set for faster benchmarking
@@ -277,11 +512,13 @@ def run_experiment(config):
         TEST_DIR, 
         processor, 
         EMOTION_LABELS,
-        max_samples_per_class=100
+        max_samples_per_class=100,
+        use_full_dataset=False  # Keep test set small for now
     )
     
     # Create dataloaders with weighted sampling if specified
-    if sampling_weights:
+    # For full dataset mode, avoid WeightedRandomSampler to prevent bias
+    if sampling_weights and not USE_FULL_DATASET:
         sampler_weights = train_dataset.get_sampling_weights()
         sampler = WeightedRandomSampler(sampler_weights, len(sampler_weights))
         train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, sampler=sampler, num_workers=2)
@@ -294,20 +531,43 @@ def run_experiment(config):
     optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
     criterion = nn.CrossEntropyLoss()
     
+    # Load checkpoint if resuming
+    if resume_from_checkpoint:
+        try:
+            checkpoint_state = load_checkpoint(resume_from_checkpoint, model, optimizer)
+            start_epoch = checkpoint_state['epoch'] + 1  # Resume from next epoch
+            best_val_acc = checkpoint_state['best_acc']
+            history = checkpoint_state['history']
+            print(f"✓ Resumed from epoch {checkpoint_state['epoch']} with best acc: {best_val_acc:.4f}")
+        except Exception as e:
+            print(f"❌ Failed to load checkpoint: {e}")
+            print("Starting fresh training...")
+            start_epoch = 0
+            best_val_acc = 0.0
+            history = {'train_loss': [], 'train_acc': [], 'val_loss': [], 'val_acc': []}
+    
     # Training loop
     print(f"\n{'='*50}")
     print("Starting benchmark training...")
+    if resume_from_checkpoint:
+        print(f"Resuming from epoch {start_epoch}")
     print(f"{'='*50}\n")
     
-    best_val_acc = 0
-    history = {'train_loss': [], 'train_acc': [], 'val_loss': [], 'val_acc': []}
-    
-    for epoch in range(NUM_EPOCHS):
+    for epoch in range(start_epoch, NUM_EPOCHS):
         print(f"\nEpoch {epoch+1}/{NUM_EPOCHS}")
         print("-" * 50)
         
-        # Train
-        train_loss, train_acc = train_epoch(model, train_loader, optimizer, criterion, device)
+        # Train with enhanced checkpointing
+        train_loss, train_acc = train_epoch(
+            model, train_loader, optimizer, criterion, device,
+            config=config, output_dir=OUTPUT_DIR, epoch=epoch,
+            best_acc=best_val_acc, history=history
+        )
+        
+        # Check if training was interrupted
+        if TRAINING_INTERRUPTED:
+            print("Training was interrupted. Exiting...")
+            break
         
         # Evaluate
         val_preds, val_labels, val_loss = evaluate(model, test_loader, device)
@@ -322,17 +582,24 @@ def run_experiment(config):
         print(f"\nTrain Loss: {train_loss:.4f} | Train Acc: {train_acc:.4f}")
         print(f"Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.4f}")
         
-        # Save each epoch model
+        # Print memory usage
+        memory_info = get_memory_usage()
+        print(f"GPU Memory: {memory_info['allocated']:.1f}GB allocated, {memory_info['reserved']:.1f}GB reserved")
+        
+        # Save checkpoint with complete state
+        is_best = val_acc > best_val_acc
+        if is_best:
+            best_val_acc = val_acc
+            print(f"✓ New best model! (Val Acc: {val_acc:.4f})")
+        
+        checkpoint_path = save_checkpoint(
+            model, optimizer, epoch+1, best_val_acc, history, config, OUTPUT_DIR, is_best
+        )
+        
+        # Also save individual epoch model for compatibility
         epoch_model_path = os.path.join(OUTPUT_DIR, f'epoch_{epoch+1}_model.pt')
         torch.save(model.state_dict(), epoch_model_path)
         print(f"✓ Epoch {epoch+1} model saved to: {epoch_model_path}")
-        
-        # Save best model
-        if val_acc > best_val_acc:
-            best_val_acc = val_acc
-            best_model_path = os.path.join(OUTPUT_DIR, 'best_model.pt')
-            torch.save(model.state_dict(), best_model_path)
-            print(f"✓ New best model saved! (Val Acc: {val_acc:.4f})")
     
     # Final evaluation
     print(f"\n{'='*50}")
@@ -341,7 +608,19 @@ def run_experiment(config):
     print(f"\nBest Validation Accuracy: {best_val_acc:.4f}")
     
     # Load best model for final evaluation
-    model.load_state_dict(torch.load(os.path.join(OUTPUT_DIR, 'best_model.pt')))
+    best_checkpoint_path = os.path.join(OUTPUT_DIR, 'best_checkpoint.pt')
+    if os.path.exists(best_checkpoint_path):
+        print("Loading best checkpoint for final evaluation...")
+        load_checkpoint(best_checkpoint_path, model)
+    else:
+        print("Loading best model state for final evaluation...")
+        # Fallback to old format if best_checkpoint doesn't exist
+        best_model_path = os.path.join(OUTPUT_DIR, 'best_model.pt')
+        if os.path.exists(best_model_path):
+            model.load_state_dict(torch.load(best_model_path))
+        else:
+            print("No best model found, using current model state")
+    
     final_preds, final_labels, _ = evaluate(model, test_loader, device)
     
     # Classification report
@@ -405,44 +684,15 @@ def main():
     
     # Define experiment configurations
     experiments = [
-        # Baseline experiment (no sampling weights)
+        # FULL DATASET EXPERIMENT - Multi-epoch for training curves
         create_experiment_config(
-            experiment_name="baseline",
+            experiment_name="full_dataset_multi_epoch",
             sampling_weights=None,
-            num_epochs=5,
-            sample_per_class=100
-        ),
-        
-        # Experiment with higher weight for underrepresented emotions
-        create_experiment_config(
-            experiment_name="weighted_disgust_fear",
-            sampling_weights={
-                'angry': 1.0,
-                'disgust': 3.0,  # Higher weight for underrepresented class
-                'fear': 1.5,
-                'happy': 1.0,
-                'neutral': 1.0,
-                'sad': 1.0,
-                'surprise': 1.0
-            },
-            num_epochs=5,
-            sample_per_class=100
-        ),
-        
-        # Experiment focusing on positive emotions
-        create_experiment_config(
-            experiment_name="positive_emotions_focus",
-            sampling_weights={
-                'angry': 0.5,
-                'disgust': 0.5,
-                'fear': 0.5,
-                'happy': 2.0,  # Higher weight for happy
-                'neutral': 1.0,
-                'sad': 0.5,
-                'surprise': 1.5  # Higher weight for surprise
-            },
-            num_epochs=5,
-            sample_per_class=100
+            use_full_dataset=True,
+            batch_size=16,  # Conservative batch size for memory safety
+            num_epochs=5,   # Multiple epochs for proper training curves
+            batch_checkpoint_frequency=100,  # Checkpoint every 100 batches
+            experiment_description="Full dataset training with 28,709 images - 3 epochs with enhanced checkpointing and training curves"
         )
     ]
     

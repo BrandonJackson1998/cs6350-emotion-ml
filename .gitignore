@@ -197,3 +197,7 @@ cython_debug/
 .virtual_environment
 
 outputs
+
+# PyTorch model files (large binary files)
+*.pt
+*.pth

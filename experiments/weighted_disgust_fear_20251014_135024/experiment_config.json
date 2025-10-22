@@ -1,0 +1,24 @@
+{
+  "experiment_name": "weighted_disgust_fear",
+  "timestamp": "20251014_135024",
+  "sampling_weights": {
+    "angry": 1.0,
+    "disgust": 3.0,
+    "fear": 1.5,
+    "happy": 1.0,
+    "neutral": 1.0,
+    "sad": 1.0,
+    "surprise": 1.0
+  },
+  "model_name": "dima806/facial_emotions_image_detection",
+  "batch_size": 32,
+  "learning_rate": 2e-05,
+  "num_epochs": 5,
+  "sample_per_class": 100,
+  "use_full_dataset": false,
+  "batch_checkpoint_frequency": 100,
+  "auto_checkpoint_on_interrupt": true,
+  "max_batch_checkpoints": 3,
+  "resume_from_checkpoint": null,
+  "experiment_description": ""
+}

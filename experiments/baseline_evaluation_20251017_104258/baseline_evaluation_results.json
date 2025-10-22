@@ -1,0 +1,61 @@
+{
+  "model_name": "dima806/facial_emotions_image_detection",
+  "evaluation_type": "baseline_pretrained",
+  "timestamp": "2025-10-17T10:42:58.710330",
+  "overall_accuracy": 0.03998328225132349,
+  "average_loss": 4.596638242650984,
+  "total_images": 7178,
+  "class_distribution": {
+    "angry": 958,
+    "disgust": 111,
+    "fear": 1024,
+    "happy": 1774,
+    "neutral": 1233,
+    "sad": 1247,
+    "surprise": 831
+  },
+  "detailed_metrics": {
+    "angry": {
+      "precision": 0.03346613545816733,
+      "recall": 0.04384133611691023,
+      "f1_score": 0.037957523723452326,
+      "support": 958
+    },
+    "disgust": {
+      "precision": 0.9024390243902439,
+      "recall": 1.0,
+      "f1_score": 0.9487179487179487,
+      "support": 111
+    },
+    "fear": {
+      "precision": 0.038183694530443756,
+      "recall": 0.0361328125,
+      "f1_score": 0.03712995484194681,
+      "support": 1024
+    },
+    "happy": {
+      "precision": 0.03293172690763052,
+      "recall": 0.023111612175873732,
+      "f1_score": 0.02716131169261345,
+      "support": 1774
+    },
+    "neutral": {
+      "precision": 0.03296703296703297,
+      "recall": 0.0267639902676399,
+      "f1_score": 0.02954341987466428,
+      "support": 1233
+    },
+    "sad": {
+      "precision": 0.012746234067207415,
+      "recall": 0.008821170809943865,
+      "f1_score": 0.01042654028436019,
+      "support": 1247
+    },
+    "surprise": {
+      "precision": 0.006968641114982578,
+      "recall": 0.01444043321299639,
+      "f1_score": 0.009400705052878966,
+      "support": 831
+    }
+  }
+}

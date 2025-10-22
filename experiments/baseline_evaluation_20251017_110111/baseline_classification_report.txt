@@ -1,0 +1,18 @@
+Baseline Model Evaluation Report
+Generated: 2025-10-17T11:01:11.898695
+Model: dima806/facial_emotions_image_detection
+Dataset: FER2013 Test Set (7178 images)
+
+              precision    recall  f1-score   support
+
+         sad     0.8263    0.8316    0.8289      1247
+     disgust     0.9024    1.0000    0.9487       111
+       angry     0.8700    0.8800    0.8749       958
+     neutral     0.8538    0.8621    0.8579      1233
+        fear     0.8442    0.8252    0.8346      1024
+    surprise     0.9143    0.9495    0.9315       831
+       happy     0.9588    0.9307    0.9445      1774
+
+    accuracy                         0.8831      7178
+   macro avg     0.8814    0.8970    0.8887      7178
+weighted avg     0.8835    0.8831    0.8832      7178
