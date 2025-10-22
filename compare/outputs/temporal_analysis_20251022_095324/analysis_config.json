@@ -1,0 +1,25 @@
+{
+  "model_path": null,
+  "model_name": "dima806/facial_emotions_image_detection",
+  "emotion_labels": [
+    "sad",
+    "disgust",
+    "angry",
+    "neutral",
+    "fear",
+    "surprise",
+    "happy"
+  ],
+  "config": {
+    "batch_size": 8,
+    "smoothing_window": 1,
+    "change_threshold": 0.1,
+    "strict_sequence": false,
+    "plot_style": "default",
+    "output_format": "png",
+    "dpi": 300
+  },
+  "analysis_timestamp": "2025-10-22T09:53:26.308632",
+  "total_frames": 6,
+  "total_transitions": 5
+}

@@ -1,0 +1,58 @@
+{
+  "sad": {
+    "significant_changes": 3,
+    "change_frequency": 0.6,
+    "largest_increase": 0.1848006695508957,
+    "largest_decrease": -0.12852534651756287,
+    "max_change_frame": 3,
+    "max_change_value": 0.1848006695508957
+  },
+  "disgust": {
+    "significant_changes": 0,
+    "change_frequency": 0.0,
+    "largest_increase": 0.002066061133518815,
+    "largest_decrease": -0.002229345729574561,
+    "max_change_frame": 2,
+    "max_change_value": -0.002229345729574561
+  },
+  "angry": {
+    "significant_changes": 2,
+    "change_frequency": 0.4,
+    "largest_increase": 0.7581108212471008,
+    "largest_decrease": -0.7584085464477539,
+    "max_change_frame": 2,
+    "max_change_value": -0.7584085464477539
+  },
+  "neutral": {
+    "significant_changes": 2,
+    "change_frequency": 0.4,
+    "largest_increase": 0.6669396758079529,
+    "largest_decrease": -0.06054133176803589,
+    "max_change_frame": 3,
+    "max_change_value": 0.6669396758079529
+  },
+  "fear": {
+    "significant_changes": 0,
+    "change_frequency": 0.0,
+    "largest_increase": 0.08679954707622528,
+    "largest_decrease": -0.07589983940124512,
+    "max_change_frame": 3,
+    "max_change_value": 0.08679954707622528
+  },
+  "surprise": {
+    "significant_changes": 0,
+    "change_frequency": 0.0,
+    "largest_increase": 0.02254786528646946,
+    "largest_decrease": -0.015703480690717697,
+    "max_change_frame": 5,
+    "max_change_value": 0.02254786528646946
+  },
+  "happy": {
+    "significant_changes": 3,
+    "change_frequency": 0.6,
+    "largest_increase": 0.9725472331047058,
+    "largest_decrease": -0.9815450310707092,
+    "max_change_frame": 1,
+    "max_change_value": -0.9815450310707092
+  }
+}

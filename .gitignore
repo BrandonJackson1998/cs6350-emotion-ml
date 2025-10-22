@@ -201,3 +201,9 @@ outputs
 # PyTorch model files (large binary files)
 *.pt
 *.pth
+
+# Exception: Save everything under compare directory
+!compare/
+!compare/**
+!compare/**/*.pt
+!compare/**/*.pth

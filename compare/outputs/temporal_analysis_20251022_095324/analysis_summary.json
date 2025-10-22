@@ -1,0 +1,122 @@
+{
+  "total_frames": 6,
+  "total_transitions": 5,
+  "emotion_labels": [
+    "sad",
+    "disgust",
+    "angry",
+    "neutral",
+    "fear",
+    "surprise",
+    "happy"
+  ],
+  "emotion_statistics": {
+    "sad": {
+      "mean_probability": 0.08017054945230484,
+      "std_probability": 0.07024666666984558,
+      "min_probability": 0.001590481959283352,
+      "max_probability": 0.18639114499092102,
+      "median_probability": 0.08060409873723984
+    },
+    "disgust": {
+      "mean_probability": 0.0020681258756667376,
+      "std_probability": 0.0007632948691025376,
+      "min_probability": 0.0013039507903158665,
+      "max_probability": 0.0035332965198904276,
+      "median_probability": 0.0017870967276394367
+    },
+    "angry": {
+      "mean_probability": 0.13824056088924408,
+      "std_probability": 0.278363972902298,
+      "min_probability": 0.0011509148171171546,
+      "max_probability": 0.7595594525337219,
+      "median_probability": 0.009006756357848644
+    },
+    "neutral": {
+      "mean_probability": 0.4053169786930084,
+      "std_probability": 0.3787085711956024,
+      "min_probability": 0.004280101042240858,
+      "max_probability": 0.8490437865257263,
+      "median_probability": 0.37736421823501587
+    },
+    "fear": {
+      "mean_probability": 0.028234971687197685,
+      "std_probability": 0.030402908101677895,
+      "min_probability": 0.001583076547831297,
+      "max_probability": 0.08848396688699722,
+      "median_probability": 0.017330201342701912
+    },
+    "surprise": {
+      "mean_probability": 0.010575108230113983,
+      "std_probability": 0.008346723392605782,
+      "min_probability": 0.0027655598241835833,
+      "max_probability": 0.025313425809144974,
+      "median_probability": 0.006089678965508938
+    },
+    "happy": {
+      "mean_probability": 0.3353936970233917,
+      "std_probability": 0.45609918236732483,
+      "min_probability": 0.0032350709661841393,
+      "max_probability": 0.9847800731658936,
+      "median_probability": 0.02034158632159233
+    }
+  },
+  "change_statistics": {
+    "sad": {
+      "total_absolute_change": 0.5893452167510986,
+      "mean_absolute_change": 0.11786904186010361,
+      "max_absolute_change": 0.1848006695508957,
+      "std_change": 0.1248774379491806,
+      "positive_changes": 2,
+      "negative_changes": 3
+    },
+    "disgust": {
+      "total_absolute_change": 0.006647537462413311,
+      "mean_absolute_change": 0.0013295074459165335,
+      "max_absolute_change": 0.002229345729574561,
+      "std_change": 0.0015182336792349815,
+      "positive_changes": 3,
+      "negative_changes": 2
+    },
+    "angry": {
+      "total_absolute_change": 1.5861570835113525,
+      "mean_absolute_change": 0.3172314167022705,
+      "max_absolute_change": 0.7584085464477539,
+      "std_change": 0.47996506094932556,
+      "positive_changes": 3,
+      "negative_changes": 2
+    },
+    "neutral": {
+      "total_absolute_change": 1.0046641826629639,
+      "mean_absolute_change": 0.2009328305721283,
+      "max_absolute_change": 0.6669396758079529,
+      "std_change": 0.2658347189426422,
+      "positive_changes": 3,
+      "negative_changes": 2
+    },
+    "fear": {
+      "total_absolute_change": 0.23399826884269714,
+      "mean_absolute_change": 0.04679965227842331,
+      "max_absolute_change": 0.08679954707622528,
+      "std_change": 0.054245200008153915,
+      "positive_changes": 3,
+      "negative_changes": 2
+    },
+    "surprise": {
+      "total_absolute_change": 0.0568988174200058,
+      "mean_absolute_change": 0.01137976348400116,
+      "max_absolute_change": 0.02254786528646946,
+      "std_change": 0.013175955973565578,
+      "positive_changes": 3,
+      "negative_changes": 2
+    },
+    "happy": {
+      "total_absolute_change": 2.945617914199829,
+      "mean_absolute_change": 0.5891236066818237,
+      "max_absolute_change": 0.9815450310707092,
+      "std_change": 0.7297149896621704,
+      "positive_changes": 2,
+      "negative_changes": 3
+    }
+  }
+}

@@ -8,7 +8,12 @@ help:
 	@echo "install                     - Install environment necessary to support this project."
 	@echo "install-deb                 - Install OS packages necessary to support this project. Assumes apt/dpkg package management system."
 	@echo "install-pip                 - Install Python pakcages necessary to suport this project."
-	@echo "code-agent-gemini-demo      - Run the demo CodeAgent using the Gemini API."
+	@echo "benchmark                   - Run the emotion recognition benchmark training."
+	@echo "test-full-dataset           - Test the full dataset training implementation."
+	@echo "evaluate-baseline           - Evaluate the baseline pre-trained model performance."
+	@echo "temporal-analysis           - Run temporal emotion analysis on video frames."
+	@echo "temporal-analysis-custom    - Run temporal analysis with custom model."
+	@echo "test-temporal               - Run tests for temporal emotion analysis system."
 	@echo
 
 $(VENV):
@@ -43,5 +48,21 @@ test-full-dataset:
 
 evaluate-baseline:
 	source $(VENV)/bin/activate; python evaluate_baseline.py
+
+temporal-analysis:
+	source $(VENV)/bin/activate; python src/temporal_emotion_analyzer.py compare/test/ --output compare/outputs/temporal_analysis
+
+temporal-analysis-custom:
+	@echo "Usage: make temporal-analysis-custom MODEL_PATH=/path/to/model.pt"
+	@echo "Example: make temporal-analysis-custom MODEL_PATH=experiments/best_model.pt"
+	@if [ -z "$(MODEL_PATH)" ]; then \
+		echo "Error: MODEL_PATH not specified"; \
+		echo "Please provide a model path: make temporal-analysis-custom MODEL_PATH=/path/to/model.pt"; \
+		exit 1; \
+	fi
+	source $(VENV)/bin/activate; python src/temporal_emotion_analyzer.py compare/test/ --model-path $(MODEL_PATH) --output compare/outputs/temporal_analysis_custom
+
+test-temporal:
+	source $(VENV)/bin/activate; python test_temporal_analysis.py
 
 run: benchmark
