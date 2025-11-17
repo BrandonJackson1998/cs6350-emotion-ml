@@ -1,0 +1,16 @@
+{
+  "experiment_name": "full_dataset_single_epoch",
+  "timestamp": "20251114_090055",
+  "sampling_weights": null,
+  "model_name": "dima806/facial_emotions_image_detection",
+  "batch_size": 16,
+  "learning_rate": 2e-05,
+  "num_epochs": 1,
+  "sample_per_class": 100,
+  "use_full_dataset": true,
+  "batch_checkpoint_frequency": 100,
+  "auto_checkpoint_on_interrupt": true,
+  "max_batch_checkpoints": 3,
+  "resume_from_checkpoint": null,
+  "experiment_description": "Full dataset evaluation: 28,709 training images, 7,178 test images - 1 epoch"
+}

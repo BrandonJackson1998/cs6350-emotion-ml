@@ -1,0 +1,148 @@
+Adaptive Emotion-Focused Training Summary
+============================================================
+
+Total Epochs: 10
+Best Overall Accuracy: 0.7699
+
+Epoch-by-Epoch Progress:
+------------------------------------------------------------
+
+Epoch 1:
+  Focus Emotions: ['fear', 'sad']
+  Train Loss: 0.4383
+  Train Acc: 0.8463
+  Test Acc: 0.7505
+  Emotion Scores:
+    sad: 0.6799
+    disgust: 0.8398
+    angry: 0.5339
+    neutral: 0.7219
+    fear: 0.6364
+    surprise: 0.8860
+    happy: 0.9243
+
+Epoch 2:
+  Focus Emotions: ['angry', 'fear']
+  Train Loss: 0.3351
+  Train Acc: 0.8866
+  Test Acc: 0.7676
+  Emotion Scores:
+    sad: 0.7162
+    disgust: 0.8031
+    angry: 0.6997
+    neutral: 0.6863
+    fear: 0.6649
+    surprise: 0.8587
+    happy: 0.9201
+
+Epoch 3:
+  Focus Emotions: ['fear', 'neutral']
+  Train Loss: 0.2940
+  Train Acc: 0.9047
+  Test Acc: 0.7247
+  Emotion Scores:
+    sad: 0.5383
+    disgust: 0.7509
+    angry: 0.7045
+    neutral: 0.7222
+    fear: 0.6044
+    surprise: 0.7768
+    happy: 0.9093
+
+Epoch 4:
+  Focus Emotions: ['sad', 'fear']
+  Train Loss: 0.2730
+  Train Acc: 0.9090
+  Test Acc: 0.7699
+  Emotion Scores:
+    sad: 0.6976
+    disgust: 0.8583
+    angry: 0.6867
+    neutral: 0.7294
+    fear: 0.6500
+    surprise: 0.8744
+    happy: 0.9167
+
+Epoch 5:
+  Focus Emotions: ['fear', 'angry']
+  Train Loss: 0.2111
+  Train Acc: 0.9335
+  Test Acc: 0.7646
+  Emotion Scores:
+    sad: 0.6528
+    disgust: 0.8430
+    angry: 0.6728
+    neutral: 0.7440
+    fear: 0.6628
+    surprise: 0.8744
+    happy: 0.9140
+
+Epoch 6:
+  Focus Emotions: ['sad', 'fear']
+  Train Loss: 0.2067
+  Train Acc: 0.9315
+  Test Acc: 0.7609
+  Emotion Scores:
+    sad: 0.6846
+    disgust: 0.8125
+    angry: 0.6898
+    neutral: 0.7241
+    fear: 0.6497
+    surprise: 0.8546
+    happy: 0.9097
+
+Epoch 7:
+  Focus Emotions: ['fear', 'sad']
+  Train Loss: 0.1683
+  Train Acc: 0.9466
+  Test Acc: 0.7647
+  Emotion Scores:
+    sad: 0.6707
+    disgust: 0.8477
+    angry: 0.7140
+    neutral: 0.7047
+    fear: 0.6553
+    surprise: 0.8742
+    happy: 0.9128
+
+Epoch 8:
+  Focus Emotions: ['fear', 'sad']
+  Train Loss: 0.1468
+  Train Acc: 0.9535
+  Test Acc: 0.7562
+  Emotion Scores:
+    sad: 0.6745
+    disgust: 0.8815
+    angry: 0.7080
+    neutral: 0.7116
+    fear: 0.6333
+    surprise: 0.8520
+    happy: 0.9049
+
+Epoch 9:
+  Focus Emotions: ['fear', 'sad']
+  Train Loss: 0.1527
+  Train Acc: 0.9538
+  Test Acc: 0.7569
+  Emotion Scores:
+    sad: 0.6763
+    disgust: 0.8608
+    angry: 0.6968
+    neutral: 0.7231
+    fear: 0.6415
+    surprise: 0.8436
+    happy: 0.9013
+
+Epoch 10:
+  Focus Emotions: ['fear', 'sad']
+  Train Loss: 0.1249
+  Train Acc: 0.9615
+  Test Acc: 0.7660
+  Emotion Scores:
+    sad: 0.6785
+    disgust: 0.8472
+    angry: 0.6716
+    neutral: 0.7306
+    fear: 0.6607
+    surprise: 0.8629
+    happy: 0.9102

@@ -1,0 +1,17 @@
+Epoch 7
+Focus Emotions: ['fear', 'sad']
+Overall Test Accuracy: 0.7647
+
+              precision    recall  f1-score   support
+
+         sad     0.5798    0.7955    0.6707      1247
+     disgust     0.7803    0.9279    0.8477       111
+       angry     0.6943    0.7349    0.7140       958
+     neutral     0.8140    0.6212    0.7047      1233
+        fear     0.7210    0.6006    0.6553      1024
+    surprise     0.8434    0.9073    0.8742       831
+       happy     0.9522    0.8766    0.9128      1774
+
+    accuracy                         0.7647      7178
+   macro avg     0.7693    0.7806    0.7685      7178
+weighted avg     0.7811    0.7647    0.7663      7178

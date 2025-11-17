@@ -507,13 +507,13 @@ def run_experiment(config):
         use_full_dataset=USE_FULL_DATASET
     )
     
-    # Use smaller test set for faster benchmarking
+    # Use full test set for comprehensive evaluation
     test_dataset = FER2013FolderDataset(
         TEST_DIR, 
         processor, 
         EMOTION_LABELS,
-        max_samples_per_class=100,
-        use_full_dataset=False  # Keep test set small for now
+        max_samples_per_class=None if USE_FULL_DATASET else 100,
+        use_full_dataset=USE_FULL_DATASET  # Use full test set when full dataset mode is enabled
     )
     
     # Create dataloaders with weighted sampling if specified
@@ -684,15 +684,15 @@ def main():
     
     # Define experiment configurations
     experiments = [
-        # FULL DATASET EXPERIMENT - Multi-epoch for training curves
+        # FULL DATASET SINGLE EPOCH EVALUATION
         create_experiment_config(
-            experiment_name="full_dataset_multi_epoch",
+            experiment_name="full_dataset_single_epoch",
             sampling_weights=None,
             use_full_dataset=True,
             batch_size=16,  # Conservative batch size for memory safety
-            num_epochs=5,   # Multiple epochs for proper training curves
+            num_epochs=1,   # Single epoch evaluation
             batch_checkpoint_frequency=100,  # Checkpoint every 100 batches
-            experiment_description="Full dataset training with 28,709 images - 3 epochs with enhanced checkpointing and training curves"
+            experiment_description="Full dataset evaluation: 28,709 training images, 7,178 test images - 1 epoch"
         )
     ]
     

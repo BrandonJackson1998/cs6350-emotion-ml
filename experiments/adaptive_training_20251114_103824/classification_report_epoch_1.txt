@@ -1,0 +1,17 @@
+Epoch 1
+Focus Emotions: ['fear', 'sad']
+Overall Test Accuracy: 0.3158
+
+              precision    recall  f1-score   support
+
+         sad     0.3662    0.7594    0.4941      1247
+     disgust     0.9800    0.4414    0.6087       111
+       angry     0.9355    0.0303    0.0586       958
+     neutral     1.0000    0.0065    0.0129      1233
+        fear     0.2191    0.8945    0.3520      1024
+    surprise     0.8621    0.0301    0.0581       831
+       happy     0.9966    0.1652    0.2834      1774
+
+    accuracy                         0.3158      7178
+   macro avg     0.7656    0.3325    0.2668      7178
+weighted avg     0.7528    0.3158    0.2323      7178

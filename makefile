@@ -11,6 +11,7 @@ help:
 	@echo "benchmark                   - Run the emotion recognition benchmark training."
 	@echo "test-full-dataset           - Test the full dataset training implementation."
 	@echo "evaluate-baseline           - Evaluate the baseline pre-trained model performance."
+	@echo "adaptive-training           - Run adaptive training focusing on worst emotions."
 	@echo "temporal-analysis           - Run temporal emotion analysis on video frames."
 	@echo "temporal-analysis-custom    - Run temporal analysis with custom model."
 	@echo "test-temporal               - Run tests for temporal emotion analysis system."
@@ -48,6 +49,9 @@ test-full-dataset:
 
 evaluate-baseline:
 	source $(VENV)/bin/activate; python evaluate_baseline.py
+
+adaptive-training:
+	source $(VENV)/bin/activate; python adaptive_training.py --initial-model experiments/full_dataset_single_epoch_20251114_090055/epoch_1_model.pt --epochs 10
 
 temporal-analysis:
 	source $(VENV)/bin/activate; python src/temporal_emotion_analyzer.py compare/test/ --output compare/outputs/temporal_analysis
