@@ -207,3 +207,6 @@ outputs
 !compare/**
 !compare/**/*.pt
 !compare/**/*.pth
+
+# Project documentation files
+Project Report Guidelines (3).pdf
