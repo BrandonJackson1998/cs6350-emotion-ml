@@ -497,13 +497,33 @@ The results validate the importance of sufficient training data and demonstrate 
 
 ## 8. Contributions
 
-**Individual Project**: All work completed independently, including:
-- Experimental design and execution
-- Model implementation and training
-- Checkpoint system development
-- Adaptive training algorithm design
-- Temporal analysis system implementation
-- Comprehensive evaluation and analysis
+This project was a collaborative effort between Brandon Jackson and Zach Walton, with both team members actively involved in planning, execution, and experimentation.
+
+### Shared Contributions
+- Project planning and experimental design
+- Research question formulation and methodology
+- Collaborative experiment execution and model training
+- Data preprocessing and validation
+- Collaborative problem-solving and debugging
+
+### Brandon Jackson
+- Initial baseline evaluations and early experiments
+- Model implementation and training pipeline development
+- Checkpoint system architecture and implementation
+- Frame-by-frame emotion comparison tool development
+- Temporal analysis system for video sequences
+- Adaptive training algorithm design and implementation
+- Comprehensive visualization tools
+
+### Zach Walton
+- Multiple training experiments across different configurations
+- Dataset analysis and class imbalance investigation
+- Hyperparameter tuning and optimization experiments
+- Error analysis and performance evaluation
+- Model evaluation and performance metrics interpretation
+- Results compilation and comparative analysis
+- Literature review and related work research
+- Primary report writing and comprehensive documentation
 
 ---
 
